@@ -6,6 +6,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
+import org.springframework.cglib.proxy.Enhancer;
+import org.springframework.cglib.proxy.InvocationHandler;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -13,7 +15,10 @@ import org.springframework.util.StringUtils;
 import ru.kmorozov.ignite.spring.annotations.IgniteResource;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.*;
+
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_GRID_NAME;
 
 /**
  * Created by sbt-morozov-kv on 22.09.2016.
@@ -86,20 +91,48 @@ public class IgniteSpringBootConfiguration {
                 : igniteProps[0];
 
         List<IgniteHolder> configs = igniteMap.get(gridName);
+        Ignite ignite;
+
         if (configs == null) {
             IgniteConfiguration defaultIgnite = getDefaultIgniteConfig(gridResource);
-            Ignite ignite = Ignition.start(defaultIgnite);
+            ignite = Ignition.start(defaultIgnite);
             List<IgniteHolder> holderList = new ArrayList<>();
             holderList.add(new IgniteHolder(defaultIgnite, ignite));
             igniteMap.put(gridName, holderList);
-
-            return ignite;
         } else {
             IgniteHolder igniteHolder = configs.get(0);
             if (igniteHolder.ignite == null) {
                 igniteHolder.ignite = Ignition.start(igniteHolder.config);
             }
-            return igniteHolder.ignite;
+            ignite = igniteHolder.ignite;
+        }
+
+        if (props.isUseSameServerNames()) {
+            Enhancer enhancer = new Enhancer();
+            enhancer.setSuperclass(Ignite.class);
+            enhancer.setCallback(new IgniteHandler(ignite));
+
+            ignite = (Ignite) enhancer.create();
+        }
+
+        return ignite;
+    }
+
+    private class IgniteHandler implements InvocationHandler {
+
+        private Ignite ignite;
+
+        IgniteHandler(Ignite ignite) {
+            this.ignite = ignite;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            return method.getName().equals("compute")
+                    ? ignite.compute(ignite.cluster()
+                    .forAttribute(ATTR_GRID_NAME, ignite.configuration().getGridName())
+                    .forServers())
+                    : method.invoke(ignite, args);
         }
     }
 

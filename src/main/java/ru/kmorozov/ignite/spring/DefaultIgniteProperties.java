@@ -23,6 +23,8 @@ public class DefaultIgniteProperties {
 
     private String ipDiscoveryRange;
 
+    private boolean useSameServerNames;
+
     public boolean isClientMode() {
         return clientMode;
     }
@@ -69,5 +71,13 @@ public class DefaultIgniteProperties {
 
     public void setGridName(String gridName) {
         this.gridName = gridName;
+    }
+
+    public boolean isUseSameServerNames() {
+        return useSameServerNames;
+    }
+
+    public void setUseSameServerNames(boolean useSameServerNames) {
+        this.useSameServerNames = useSameServerNames;
     }
 }
