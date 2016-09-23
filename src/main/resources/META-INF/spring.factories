@@ -1,0 +1,4 @@
+
+# Ignite auto-configurations
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=ru.kmorozov.ignite.spring.IgniteAutoConfiguration
