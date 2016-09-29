@@ -24,10 +24,12 @@ public class IgniteBeanFactory extends DefaultListableBeanFactory {
         if (descriptor == null
                 || descriptor.getField() == null
                 || !descriptor.getField().getType().equals(Ignite.class))
-            return super.resolveDependency(descriptor, beanName, autowiredBeanNames, typeConverter);
+            return super.resolveDependency(descriptor, beanName,
+                    autowiredBeanNames, typeConverter);
         else {
             if (configuration == null)
-                configuration = new IgniteSpringBootConfiguration(createBean(DefaultIgniteProperties.class));
+                configuration = new IgniteSpringBootConfiguration(
+                        createBean(DefaultIgniteProperties.class));
             return configuration.getIgnite(
                     descriptor.getField().getAnnotationsByType(IgniteResource.class));
         }
